@@ -12,6 +12,7 @@ globals = {
   "Color",
   "DamageFlag",
   "Direction",
+  "DoorSlot",
   "EffectVariant",
   "EntityCollisionClass",
   "EntityFlag",
@@ -25,6 +26,7 @@ globals = {
   "GridEntityType",
   "GridRooms",
   "Input",
+  "InputHook",
   "Isaac",
   "ItemType",
   "Keyboard",
@@ -53,4 +55,12 @@ globals = {
   "TearVariant",
   "TrinketType",
   "Vector",
+
+  -- Racing+ global variables
+  "RacingPlusGlobals",
+  "RacingPlusSchoolbag",
+  "SinglePlayerCoopBabies",
+
+  -- This is used in the True Co-op Mod
+  "InfinityTrueCoopInterface",
 }
