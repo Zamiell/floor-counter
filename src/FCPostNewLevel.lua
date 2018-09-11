@@ -7,12 +7,14 @@ local FCExplore = require("src/fcexplore")
 -- ModCallbacks.MC_POST_NEW_LEVEL (18)
 function FCPostNewLevel:Main()
   -- Local variables
+  --[[
   local game = Game()
-  local level = game:GetLevel()
-  local stage = level:GetStage()
-  local stageType = level:GetStageType()
+  --local level = game:GetLevel()
+  --local stage = level:GetStage()
+  --local stageType = level:GetStageType()
 
   Isaac.DebugString("MC_POST_NEW_LEVEL - " .. tostring(stage) .. "." .. tostring(stageType))
+  --]]
 
   -- Check for duplicate rooms
   -- (this should exactly emulate what Racing+ does)
@@ -48,7 +50,7 @@ function FCPostNewLevel:CheckDupeRooms()
       -- Check to see if this room ID appears multiple times on this floor
       for j = 1, #roomIDs do
         if roomID == roomIDs[j] then
-          Isaac.DebugString("Duplicate room " .. tostring(roomID) .. " found (on same floor) - reseeding.")
+          --Isaac.DebugString("Duplicate room " .. tostring(roomID) .. " found (on same floor) - reseeding.")
           Isaac.ExecuteCommand("reseed")
           return true
         end

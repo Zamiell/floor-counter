@@ -1,8 +1,9 @@
 local FCExplore = {}
 
 -- Includes
-local json      = require("json")
-local astar     = require("src/astar")
+local json = require("json")
+require("src/astar")
+require("src/tiledmaphandler")
 local FCGlobals = require("src/fcglobals")
 local FCShapes  = require("src/fcshapes")
 
@@ -110,37 +111,36 @@ function FCExplore:Start()
     end
   end
 
-  FCExplore:PrintGrid()
+  --FCExplore:PrintGrid()
 
-  local moves = astar:CalcMoves(FCGlobals.grid,
-                                FCGlobals.startingRoom.x, FCGlobals.startingRoom.y,
-                                FCGlobals.bossRoom.x, FCGlobals.bossRoom.y)
-  local path = astar:CalcPath(moves)
-  if path == nil then
-    Isaac.DebugString("Error: The A* algorithm failed to find a path.")
-    return
-  end
+  local maphandler = TiledMapHandler(FCGlobals.grid)
+  local astar_instance = AStar(maphandler)
+  local path = astar_instance:findPath(FCGlobals.startingRoom, FCGlobals.bossRoom)
+  local nodes = path:getNodes()
+
+  --[[
   Isaac.DebugString("Path:")
-  for i = 1, #path do
-    Isaac.DebugString(tostring(i) .. ": (" .. tostring(path[i].x) .. ", " .. tostring(path[i].y) .. ")")
+  for i = 1, #nodes do
+    local loc = nodes[i].location
+    Isaac.DebugString(tostring(i) .. ": " .. " (" .. tostring(loc.x) .. ", " .. tostring(loc.y) .. ")")
   end
+  --]]
 
   -- Find the direction from the starting room
-  -- path[1] will always be the starting room
-  -- path[2] will be the first room to go to next to the starting room
+  local firstRoom = nodes[1].location -- The first node will be the first room to go to next to the starting room
   local direction
-  if path[2].x < path[1].x and
-     path[2].y == path[1].y then
+  if firstRoom.x < FCGlobals.startingRoom.x and
+     firstRoom.y == FCGlobals.startingRoom.y then
 
     direction = "left"
 
-  elseif path[2].x > path[1].x and
-         path[2].y == path[1].y then
+  elseif firstRoom.x > FCGlobals.startingRoom.x and
+         firstRoom.y == FCGlobals.startingRoom.y then
 
     direction = "right"
 
-  elseif path[2].x == path[1].x and
-         path[2].y > path[1].y then
+  elseif firstRoom.x == FCGlobals.startingRoom.x and
+         firstRoom.y > FCGlobals.startingRoom.y then
 
     direction = "down"
 
@@ -148,7 +148,7 @@ function FCExplore:Start()
     Isaac.DebugString("Error: Was not able to find the direction of the boss from the starting room.")
     return
   end
-  Isaac.DebugString("Boss is in direction: " .. tostring(direction))
+  --Isaac.DebugString("Boss is in direction: " .. tostring(direction))
   FCExplore:IncrementRightWays(direction)
 
   -- Reseed the floor and do it all again
@@ -243,7 +243,7 @@ function FCExplore:IncrementRightWays(direction)
     Isaac.DebugString("Error: Failed to get the room type for the starting room.")
     return
   end
-  Isaac.DebugString("Starting room is type: " .. roomType)
+  --Isaac.DebugString("Starting room is type: " .. roomType)
 
   local data = FCGlobals.saveData[roomType]
   data[direction] = data[direction] + 1

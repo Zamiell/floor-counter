@@ -1,239 +1,150 @@
-local astar = {}
+--
+--  astar.lua
+--  lua-astar
+--
+--  Based on John Eriksson's Python A* implementation.
+--  http://www.pygame.org/project-AStar-195-.html
+--
+--  Created by Jay Roberts on 2011-01-08.
+--  Copyright 2011 Jay Roberts All rights reserved.
+--
+--  Licensed under the MIT License
+--
+--  Permission is hereby granted, free of charge, to any person obtaining a copy
+--  of this software and associated documentation files (the "Software"), to deal
+--  in the Software without restriction, including without limitation the rights
+--  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+--  copies of the Software, and to permit persons to whom the Software is
+--  furnished to do so, subject to the following conditions:
+--
+--  The above copyright notice and this permission notice shall be included in
+--  all copies or substantial portions of the Software.
+--
+--  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+--  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+--  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+--  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+--  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+--  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+--  THE SOFTWARE.
 
---[[
-A* algorithm for LUA
-Ported to LUA by Altair
-21 septembre 2006
---]]
-
-local function debug(string)
-  local printDebug = true
-  if printDebug then
-    Isaac.DebugString("A* - " .. string)
-  end
+require 'src/middleclass'
+Path = class('Path')
+function Path:initialize(nodes, totalCost)
+  self.nodes = nodes
+  self.totalCost = totalCost
 end
 
-function astar:CalcMoves(mapmat, px, py, tx, ty)
-  -- Based on some code of LMelior but made it work and improved way beyond his code, still thx LMelior!
-  --[[ PRE:
-  mapmat is a 2d array
-  px is the player's current x
-  py is the player's current y
-  tx is the target x
-  ty is the target y
-  Note: all the x and y are the x and y to be used in the table.
-  By this I mean, if the table is 3 by 2, the x can be 1,2,3 and the y can be 1 or 2.
-  --]]
+function Path:getNodes()
+  return self.nodes
+end
 
-  --[[ POST:
-  closedlist is a list with the checked nodes.
-  It will return nil if all the available nodes have been checked but the target hasn't been found.
-  --]]
+function Path:getTotalMoveCost()
+  return self.totalCost
+end
 
-  -- variables
-  local openlist = {} -- Initialize table to store possible moves
-  local closedlist = {} -- Initialize table to store checked gridsquares
-  local listk = 1 -- List counter
-  local closedk = 0 -- Closedlist counter
-  local tempH = math.abs(px - tx) + math.abs(py - ty)
-  local tempG = 0
-  openlist[1] = { -- Make the starting point in list
-    x = px,
-    y = py,
-    g = 0,
-    h = tempH,
-    f = 0 + tempH,
-    par = 1,
-  }
-  local xsize = #mapmat[1] -- horizontal map size
-  local ysize = #mapmat -- vertical map size
-  local curbase = {} -- Current square from which to check possible moves
-  local basis = 1 -- Index of current base
+Node = class('Node')
+function Node:initialize(location, mCost, lid, parent)
+  self.location = location -- Where is the node located
+  self.mCost = mCost -- Total move cost to reach this node
+  self.parent = parent -- Parent node
+  self.score = 0 -- Calculated score for this node
+  self.lid = lid -- set the location id - unique for each location in the map
+end
 
-  -- Growing loop
-  while listk > 0 do
-    -- Get the lowest f of the openlist
-    local lowestF = openlist[listk].f
-    basis = listk
-    for k = listk, 1, -1 do
-      if openlist[k].f < lowestF then
-        lowestF = openlist[k].f
-        basis = k
+function Node.__eq(a, b)
+  return a.lid == b.lid
+end
+
+AStar = class('AStar')
+function AStar:initialize(maphandler)
+  self.mh = maphandler
+end
+
+function AStar:_getBestOpenNode()
+  local bestNode = nil
+
+  for lid, n in pairs(self.open) do
+    if bestNode == nil then
+      bestNode = n
+    else
+      if n.score <= bestNode.score then
+        bestNode = n
       end
-    end
-
-    closedk = closedk + 1
-    table.insert(closedlist, closedk, openlist[basis])
-
-    curbase = closedlist[closedk] -- define current base from which to grow list
-
-    local rightOK = true
-    local leftOK = true   -- Booleans defining if they're OK to add
-    local downOK = true   -- (must be reset for each while loop)
-    local upOK = true
-
-    -- Look through closedlist
-    if closedk > 0 then
-      for k = 1, closedk do
-        if closedlist[k].x == curbase.x + 1 and closedlist[k].y == curbase.y then
-          rightOK = false
-          debug("Next point cannot be right - on closedList.")
-        end
-        if closedlist[k].x == curbase.x - 1 and closedlist[k].y == curbase.y then
-          leftOK = false
-          debug("Next point cannot be left - on closedList.")
-        end
-        if closedlist[k].x == curbase.x and closedlist[k].y == curbase.y + 1 then
-          downOK = false
-          debug("Next point cannot be down - on closedList.")
-        end
-        if closedlist[k].x == curbase.x and closedlist[k].y == curbase.y - 1 then
-          upOK = false
-          debug("Next point cannot be up - on closedList.")
-        end
-      end
-    end
-
-    -- Check if next points are on the map and within moving distance
-    if curbase.x + 1 > xsize then
-      rightOK = false
-      debug("Next point cannot be right - not on map.")
-    end
-    if curbase.x - 1 < 1 then
-      leftOK = false
-      debug("Next point cannot be left - not on map.")
-    end
-    if curbase.y + 1 > ysize then
-      downOK = false
-      debug("Next point cannot be down - not on map.")
-    end
-    if curbase.y-1<1 then
-      upOK = false
-      debug("Next point cannot be up - not on map.")
-    end
-
-    -- If it IS on the map, check map for obstacles
-    -- (Lua returns an error if you try to access a table position that doesn't exist,
-    -- so you can't combine it with above)
-    if curbase.x + 1 <= xsize and mapmat[curbase.y][curbase.x + 1] ~= 0 then
-      rightOK = false
-      debug("Next point cannot be right - obstacle in the way.")
-    end
-    if curbase.x - 1 >= 1 and mapmat[curbase.y][curbase.x - 1] ~= 0 then
-      leftOK = false
-      debug("Next point cannot be left - obstacle in the way.")
-    end
-    if curbase.y + 1 <= ysize and mapmat[curbase.y + 1][curbase.x] ~= 0 then
-      downOK = false
-      debug("Next point cannot be down - obstacle in the way.")
-    end
-    if curbase.y - 1 >= 1 and mapmat[curbase.y - 1][curbase.x] ~= 0 then
-      upOK = false
-      debug("Next point cannot be up - obstacle in the way.")
-    end
-
-    -- check if the move from the current base is shorter then from the former parrent
-    tempG = curbase.g + 1
-    for k = 1, listk do
-      if rightOK and openlist[k].x==curbase.x+1 and openlist[k].y==curbase.y and openlist[k].g>tempG then
-        tempH=math.abs((curbase.x+1)-tx)+math.abs(curbase.y-ty)
-        table.insert(openlist,k,{x=curbase.x+1, y=curbase.y, g=tempG, h=tempH, f=tempG+tempH, par=closedk})
-        rightOK=false
-      end
-
-      if leftOK and openlist[k].x==curbase.x-1 and openlist[k].y==curbase.y and openlist[k].g>tempG then
-        tempH=math.abs((curbase.x-1)-tx)+math.abs(curbase.y-ty)
-        table.insert(openlist,k,{x=curbase.x-1, y=curbase.y, g=tempG, h=tempH, f=tempG+tempH, par=closedk})
-        leftOK=false
-      end
-
-      if downOK and openlist[k].x==curbase.x and openlist[k].y==curbase.y+1 and openlist[k].g>tempG then
-        tempH=math.abs((curbase.x)-tx)+math.abs(curbase.y+1-ty)
-        table.insert(openlist,k,{x=curbase.x, y=curbase.y+1, g=tempG, h=tempH, f=tempG+tempH, par=closedk})
-        downOK=false
-      end
-
-      if upOK and openlist[k].x==curbase.x and openlist[k].y==curbase.y-1 and openlist[k].g>tempG then
-        tempH=math.abs((curbase.x)-tx)+math.abs(curbase.y-1-ty)
-        table.insert(openlist,k,{x=curbase.x, y=curbase.y-1, g=tempG, h=tempH, f=tempG+tempH, par=closedk})
-        upOK=false
-      end
-    end
-
-    -- Add points to openlist
-    -- Add point to the right of current base point
-    if rightOK then
-      listk=listk+1
-      tempH=math.abs((curbase.x+1)-tx)+math.abs(curbase.y-ty)
-      table.insert(openlist,listk,{x=curbase.x+1, y=curbase.y, g=tempG, h=tempH, f=tempG+tempH, par=closedk})
-    end
-
-    -- Add point to the left of current base point
-    if leftOK then
-      listk=listk+1
-      tempH=math.abs((curbase.x-1)-tx)+math.abs(curbase.y-ty)
-      table.insert(openlist,listk,{x=curbase.x-1, y=curbase.y, g=tempG, h=tempH, f=tempG+tempH, par=closedk})
-    end
-
-    -- Add point on the top of current base point
-    if downOK then
-      listk=listk+1
-      tempH=math.abs(curbase.x-tx)+math.abs((curbase.y+1)-ty)
-      table.insert(openlist,listk,{x=curbase.x, y=curbase.y+1, g=tempG, h=tempH, f=tempG+tempH, par=closedk})
-    end
-
-    -- Add point on the bottom of current base point
-    if upOK then
-      listk=listk+1
-      tempH=math.abs(curbase.x-tx)+math.abs((curbase.y-1)-ty)
-      table.insert(openlist,listk,{x=curbase.x, y=curbase.y-1, g=tempG, h=tempH, f=tempG+tempH, par=closedk})
-    end
-
-    table.remove(openlist, basis)
-    listk=listk-1
-
-    if closedlist[closedk].x==tx and closedlist[closedk].y==ty then
-      return closedlist
     end
   end
+
+  return bestNode
+end
+
+function AStar:_tracePath(n)
+  local nodes = {}
+  local totalCost = n.mCost
+  local p = n.parent
+
+  table.insert(nodes, 1, n)
+
+  while true do
+    if p.parent == nil then
+      break
+    end
+    table.insert(nodes, 1, p)
+    p = p.parent
+  end
+
+  return Path(nodes, totalCost)
+end
+
+function AStar:_handleNode(node, goal)
+  self.open[node.lid] = nil
+  self.closed[node.lid] = node.lid
+
+  assert(node.location ~= nil, 'About to pass a node with nil location to getAdjacentNodes')
+
+  local nodes = self.mh:getAdjacentNodes(node, goal)
+
+  for lid, n in pairs(nodes) do repeat
+    if self.mh:locationsAreEqual(n.location, goal) then
+      return n
+    elseif self.closed[n.lid] ~= nil then -- Alread in close, skip this
+      break
+    elseif self.open[n.lid] ~= nil then -- Already in open, check if better score
+      local on = self.open[n.lid]
+
+      if n.mCost < on.mCost then
+        self.open[n.lid] = nil
+        self.open[n.lid] = n
+      end
+    else -- New node, append to open list
+      self.open[n.lid] =  n
+    end
+  until true end
 
   return nil
 end
 
-function astar:CalcPath(closedlist)
-  --[[ PRE:
-  closedlist is a list with the checked nodes.
-  OR nil if all the available nodes have been checked but the target hasn't been found.
-  --]]
+function AStar:findPath(fromlocation, tolocation)
+  self.open = {}
+  self.closed = {}
 
-  --[[ POST:
-  path is a list with all the x and y coords of the nodes of the path to the target.
-  OR nil if closedlist==nil
-  --]]
+  local goal = tolocation
+  local fnode = self.mh:getNode(fromlocation)
 
-  if closedlist == nil then
-    return nil
-  end
-  local path={}
-  local pathIndex={}
-  local last = #closedlist
-  table.insert(pathIndex,1,last)
+  local nextNode = nil
 
-  local i = 1
-  while pathIndex[i]>1 do
-    i = i + 1
-    table.insert(pathIndex, i, closedlist[pathIndex[i-1]].par)
+  if fnode ~= nil then
+    self.open[fnode.lid] = fnode
+    nextNode = fnode
   end
 
-  for n = #pathIndex, 1, -1 do
-    table.insert(path,{
-      x = closedlist[pathIndex[n]].x,
-      y = closedlist[pathIndex[n]].y,
-    })
+  while nextNode ~= nil do
+    local finish = self:_handleNode(nextNode, goal)
+
+    if finish then
+      return self:_tracePath(finish)
+    end
+    nextNode = self:_getBestOpenNode()
   end
 
-  closedlist = nil
-  return path
+  return nil
 end
-
-return astar

@@ -8,7 +8,7 @@ local FCPostRender      = require("src/fcpostrender") -- The PostRender callback
 local FCUseItem         = require("src/fcuseitem") -- The UseItem callback (3)
 local FCPostGameStarted = require("src/fcpostgamestarted") -- The PostGameStarted callback (15)
 local FCPostNewLevel    = require("src/fcpostnewlevel") -- The PostNewLevel callback (18)
-local FCPostNewRoom     = require("src/fcpostnewroom") -- The PostNewRoom callback (19)
+--local FCPostNewRoom     = require("src/fcpostnewroom") -- The PostNewRoom callback (19)
 
 -- Make a copy of this object so that we can use it elsewhere
 FCGlobals.FloorCounter = FloorCounter -- (this is needed for loading the "save.dat" file)
@@ -19,7 +19,7 @@ FloorCounter:AddCallback(ModCallbacks.MC_POST_RENDER, FCPostRender.Main) -- 2
 FloorCounter:AddCallback(ModCallbacks.MC_USE_ITEM, FCUseItem.Main) -- 3
 FloorCounter:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, FCPostGameStarted.Main) -- 15
 FloorCounter:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, FCPostNewLevel.Main) -- 18
-FloorCounter:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FCPostNewRoom.Main) -- 19
+--FloorCounter:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FCPostNewRoom.Main) -- 19
 
 --[[
 

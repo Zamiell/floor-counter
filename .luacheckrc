@@ -63,4 +63,12 @@ globals = {
 
   -- This is used in the True Co-op Mod
   "InfinityTrueCoopInterface",
+
+  -- AStar globals
+  "class",
+  "Path",
+  "Node",
+  "Object",
+  "AStar",
+  "TiledMapHandler",
 }
