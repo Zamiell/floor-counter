@@ -5,7 +5,6 @@ local json = require("json")
 require("src/astar")
 require("src/tiledmaphandler")
 local FCGlobals = require("src/fcglobals")
-local FCShapes  = require("src/fcshapes")
 
 -- Constants
 FCExplore.roomGridValue = 0
@@ -44,6 +43,7 @@ function FCExplore:Start()
     local roomIndex = roomDesc.SafeGridIndex -- This is always the top-left index
     local roomData = roomDesc.Data
     local roomType = roomData.Type
+    local roomShape = roomData.Shape
 
     -- There will never be any special rooms in our main path (besides the boss room),
     -- so just ignore them to save CPU cycles
@@ -51,9 +51,6 @@ function FCExplore:Start()
     if roomType == RoomType.ROOM_DEFAULT or -- 1
        roomType == RoomType.ROOM_BOSS then -- 5
 
-      local roomVariant = roomData.Variant
-      local floorString = "F11_1" -- Hard coded for now
-      local roomShape = FCShapes[floorString][roomVariant]
       x, y = FCExplore:GetXYFromGridIndex(roomIndex)
 
       --[[
@@ -111,7 +108,7 @@ function FCExplore:Start()
     end
   end
 
-  --FCExplore:PrintGrid()
+  FCExplore:PrintGrid()
 
   local maphandler = TiledMapHandler(FCGlobals.grid)
   local astar_instance = AStar(maphandler)
